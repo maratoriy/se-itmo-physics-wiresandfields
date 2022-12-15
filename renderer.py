@@ -1,4 +1,5 @@
 import matplotlib as mpl
+import os
 from matplotlib.backend_bases import MouseButton
 from matplotlib.patches import Circle
 from system import *
@@ -20,9 +21,9 @@ class ChangeDensity(RendererToolBase):
         super().__init__(toolmanager, name, *args, **kwargs)
         self.mult = kwargs.pop('mult')
         if(self.mult > 1):
-            self.image = r"C:\Users\Lenovo\PycharmProjects\pythonProject\up.png"
+            self.image = os.path.abspath("up.png")
         else:
-            self.image = r"C:\Users\Lenovo\PycharmProjects\pythonProject\down.png"
+            self.image =  os.path.abspath("down.png")
 
     def trigger(self, sender, event, data=None):
         self.renderer.density*=self.mult
@@ -67,7 +68,7 @@ class CursorTool(RendererToolBase, ToolToggleBase):
 class AddNewWire(CursorTool):
     elec = 10
     description = "Add a new wire\nPoint to location\nLeft or right click determines direction\nUse scroll to change electric conductivity "
-    image = r"C:\Users\Lenovo\PycharmProjects\pythonProject\add.png"
+    image = os.path.abspath("add.png")
 
     def enable(self, event=None):
         super(AddNewWire, self).enable(event)
@@ -89,7 +90,7 @@ class AddNewWire(CursorTool):
 
 class RemoveWire(CursorTool):
     description = "Remove wire\nPoint to wire and use left click"
-    image = r"C:\Users\Lenovo\PycharmProjects\pythonProject\remove.png"
+    image = os.path.abspath("remove.png")
     def _left(self, event):
         for point in self.renderer.system.points:
             if(point.hit(event.xdata, event.ydata)):
