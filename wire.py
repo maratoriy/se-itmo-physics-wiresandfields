@@ -6,4 +6,4 @@ class Wire():
         self.electric = electric
 
     def hit(self, x, y):
-        return (x-self.x)**2+(y-self.y)**2 <= self.size**2
+        return (x - self.x) ** 2 + (y - self.y) ** 2 <= self.size ** 2

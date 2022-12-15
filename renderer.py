@@ -1,18 +1,23 @@
-import matplotlib as mpl
 import os
+
+import matplotlib as mpl
 from matplotlib.backend_bases import MouseButton
+from matplotlib.backend_tools import ToolBase, ToolToggleBase, cursors
 from matplotlib.patches import Circle
+
+from draggablepoint import *
 from system import *
 from wire import *
-from draggablepoint import *
-from matplotlib.backend_tools import ToolBase, ToolToggleBase, cursors
 
 plt.rcParams['toolbar'] = 'toolmanager'
+
 
 class RendererToolBase(ToolBase):
     def __init__(self, toolmanager, name, *args, **kwargs):
         self.renderer = kwargs.pop('renderer')
+        self.system = self.renderer.system
         super().__init__(toolmanager, name)
+
 
 class ChangeDensity(RendererToolBase):
     description = "Change density of the plot"
@@ -20,15 +25,15 @@ class ChangeDensity(RendererToolBase):
     def __init__(self, toolmanager, name, *args, **kwargs):
         super().__init__(toolmanager, name, *args, **kwargs)
         self.mult = kwargs.pop('mult')
-        if(self.mult > 1):
-            self.image = os.path.abspath("up.png")
+        if (self.mult > 1):
+            self.image = os.path.abspath("icons/up.png")
         else:
-            self.image =  os.path.abspath("down.png")
+            self.image = os.path.abspath("icons/down.png")
 
     def trigger(self, sender, event, data=None):
-        self.renderer.density*=self.mult
+        self.renderer.density *= self.mult
         self.renderer.update()
-        self.canvas.draw()
+
 
 class CursorTool(RendererToolBase, ToolToggleBase):
     cursor = cursors.SELECT_REGION
@@ -47,13 +52,12 @@ class CursorTool(RendererToolBase, ToolToggleBase):
         x, y = event.xdata, event.ydata
 
         if (x is not None and y is not None and event.inaxes is not None):
-            if(event.button == MouseButton.LEFT):
-               self._left(event)
-            if(event.button == MouseButton.RIGHT):
-               self._right(event)
+            if (event.button == MouseButton.LEFT):
+                self._left(event)
+            if (event.button == MouseButton.RIGHT):
+                self._right(event)
 
         self.renderer.update()
-        self.canvas.draw()
 
     def _left(self, event):
         pass
@@ -68,36 +72,43 @@ class CursorTool(RendererToolBase, ToolToggleBase):
 class AddNewWire(CursorTool):
     elec = 10
     description = "Add a new wire\nPoint to location\nLeft or right click determines direction\nUse scroll to change electric conductivity "
-    image = os.path.abspath("add.png")
+    image = os.path.abspath("icons/add.png")
 
     def enable(self, event=None):
         super(AddNewWire, self).enable(event)
-        self.toolmanager.message_event("Conductivity of wire: "+str(self.elec))
+        self.toolmanager.message_event("Conductivity of wire: " + str(self.elec))
 
     def _scroll(self, event):
-        if(event.button=="up"):
-            self.elec+=1
-        if(event.button=="down" and self.elec>1):
-            self.elec-=1
-        self.toolmanager.message_event("Conductivity of wire: "+str(self.elec))
+        if (event.button == "up"):
+            self.elec += 1
+        if (event.button == "down" and self.elec > 1):
+            self.elec -= 1
+        self.toolmanager.message_event("Conductivity of wire: " + str(self.elec))
 
     def _left(self, event):
-        self.renderer.system.addPoint(Wire(event.xdata, event.ydata, 0.5, self.elec))
+        self.renderer.system.addObject(Wire(event.xdata, event.ydata, 0.5, self.elec))
 
     def _right(self, event):
-        self.renderer.system.addPoint(Wire(event.xdata, event.ydata, 0.5, -self.elec))
+        self.renderer.system.addObject(Wire(event.xdata, event.ydata, 0.5, -self.elec))
 
 
 class RemoveWire(CursorTool):
     description = "Remove wire\nPoint to wire and use left click"
-    image = os.path.abspath("remove.png")
+    image = os.path.abspath("icons/remove.png")
+
     def _left(self, event):
-        for point in self.renderer.system.points:
-            if(point.hit(event.xdata, event.ydata)):
-                self.renderer.system.removePoint(point)
+        for point in self.renderer.system.objects:
+            if (point.hit(event.xdata, event.ydata)):
+                self.renderer.system.removeObject(point)
 
 
+class RemoveAllWires(RendererToolBase):
+    description = "Remove all wires"
+    image = os.path.abspath("icons/remove_all.png")
 
+    def trigger(self, sender, event, data=None):
+        self.system.removeAllObjects()
+        self.renderer.update()
 
 
 class Renderer():
@@ -112,27 +123,34 @@ class Renderer():
         self.update()
         self.ax.set_xlabel('$x$')
         self.ax.set_ylabel('$y$')
-        self.ax.set_xlim(-self.XMAX, self.XMAX)
-        self.ax.set_ylim(-self.YMAX, self.YMAX)
         self.ax.set_aspect('equal')
+        self.reshape()
         self.figure.canvas.manager.toolmanager.add_tool('DensityUp', ChangeDensity, renderer=self, mult=1.2)
-        self.figure.canvas.manager.toolmanager.add_tool('DensityDown', ChangeDensity, renderer=self, mult=1/1.2)
+        self.figure.canvas.manager.toolmanager.add_tool('DensityDown', ChangeDensity, renderer=self, mult=1 / 1.2)
         self.figure.canvas.manager.toolmanager.add_tool('AddWire', AddNewWire, renderer=self)
         self.figure.canvas.manager.toolmanager.add_tool('RemoveWire', RemoveWire, renderer=self)
+        self.figure.canvas.manager.toolmanager.add_tool('RemoveAllWires', RemoveAllWires, renderer=self)
         self.figure.canvas.manager.toolbar.add_tool('DensityUp', 'system')
         self.figure.canvas.manager.toolbar.add_tool('DensityDown', 'system')
         self.figure.canvas.manager.toolbar.add_tool('AddWire', 'system')
         self.figure.canvas.manager.toolbar.add_tool('RemoveWire', 'system')
+        self.figure.canvas.manager.toolbar.add_tool('RemoveAllWires', 'system')
         to_remove = ['forward', 'back', 'help']
         for i in to_remove:
             self.figure.canvas.manager.toolmanager.remove_tool(i)
         plt.show()
+
+    def reshape(self):
+        self.ax.set_xlim(-self.XMAX, self.XMAX)
+        self.ax.set_ylim(-self.YMAX, self.YMAX)
 
     def update(self):
         self.clear()
         self.dfield()
         self.dpoints()
         self.dwalls()
+        self.reshape()
+        self.figure.canvas.draw()
 
     def clear(self):
         plt.cla()
@@ -142,14 +160,15 @@ class Renderer():
         y = np.linspace(-self.YMAX, self.YMAX, self.ry)
         X, Y = np.meshgrid(x, y)
         [Vx, Vy] = self.system.field(X, Y)
+        X, Y = np.meshgrid(x, y)
 
-        if len(Vx) and len(Vy) and len(self.system.points)>0:
+        if len(Vx) and len(Vy) and len(self.system.objects) > 0:
             self.ax.streamplot(x, y, -Vy, Vx, color=(2 * np.log(np.hypot(Vx, Vy))), linewidth=1, cmap=plt.cm.inferno,
                                density=self.density, arrowstyle='->', arrowsize=1.5)
 
     def dpoints(self):
         self.draggables = []
-        for point in self.system.points:
+        for point in self.system.objects:
             circle = Circle((point.x, point.y), point.size,
                             color=plt.cm.RdBu(mpl.colors.Normalize(vmin=-10, vmax=10)(-point.electric)), zorder=100)
             self.ax.add_patch(circle)

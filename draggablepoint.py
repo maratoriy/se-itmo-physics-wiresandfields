@@ -1,7 +1,3 @@
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-
-
 class DraggablePoint:
     lock = None  # only one can be animated at a time
 
@@ -76,9 +72,6 @@ class DraggablePoint:
 
         # Update the system on release
         self.update()
-
-        # redraw the full figure
-        self.point.figure.canvas.draw()
 
     def disconnect(self):
         'disconnect all the stored connection ids'
