@@ -1,6 +1,5 @@
-import math as m
-
 import numpy as np
+import math as m
 
 
 class System():
@@ -24,25 +23,28 @@ class System():
 
     def compute(self, i, X, Y, R, I):
         dist = m.sqrt(m.pow(Y[i], 2) + m.pow(X[i], 2))
-        if (dist < R):
+        if(dist<R):
             H = I / (2 * m.pi * R ** 2) * dist
-            return self.gamma * H
+            return self.gamma*H
         else:
             return (self.gamma * I) / (2 * m.pi * dist)
+
+
 
     def computeX(self, i, X, Y, R, I):
         dist = m.sqrt(m.pow(Y[i], 2) + m.pow(X[i], 2))
         B = self.compute(i, X, Y, R, I)
-        Bx = B * (X[i] / dist)
+        Bx = B * (X[i]/dist)
 
         return Bx
 
     def computeY(self, i, X, Y, R, I):
         dist = m.sqrt(m.pow(Y[i], 2) + m.pow(X[i], 2))
         B = self.compute(i, X, Y, R, I)
-        By = B * (Y[i] / dist)
+        By = B * (Y[i]/dist)
 
         return By
+
 
     def field(self, X, Y):
         u, v = X.shape

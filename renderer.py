@@ -1,16 +1,13 @@
-import os
-
 import matplotlib as mpl
+import os
 from matplotlib.backend_bases import MouseButton
-from matplotlib.backend_tools import ToolBase, ToolToggleBase, cursors
 from matplotlib.patches import Circle
-
-from draggablepoint import *
 from system import *
 from wire import *
+from draggablepoint import *
+from matplotlib.backend_tools import ToolBase, ToolToggleBase, cursors
 
 plt.rcParams['toolbar'] = 'toolmanager'
-
 
 class RendererToolBase(ToolBase):
     def __init__(self, toolmanager, name, *args, **kwargs):
@@ -18,22 +15,20 @@ class RendererToolBase(ToolBase):
         self.system = self.renderer.system
         super().__init__(toolmanager, name)
 
-
 class ChangeDensity(RendererToolBase):
     description = "Change density of the plot"
 
     def __init__(self, toolmanager, name, *args, **kwargs):
         super().__init__(toolmanager, name, *args, **kwargs)
         self.mult = kwargs.pop('mult')
-        if (self.mult > 1):
+        if(self.mult > 1):
             self.image = os.path.abspath("icons/up.png")
         else:
-            self.image = os.path.abspath("icons/down.png")
+            self.image =  os.path.abspath("icons/down.png")
 
     def trigger(self, sender, event, data=None):
-        self.renderer.density *= self.mult
+        self.renderer.density*=self.mult
         self.renderer.update()
-
 
 class CursorTool(RendererToolBase, ToolToggleBase):
     cursor = cursors.SELECT_REGION
@@ -52,10 +47,10 @@ class CursorTool(RendererToolBase, ToolToggleBase):
         x, y = event.xdata, event.ydata
 
         if (x is not None and y is not None and event.inaxes is not None):
-            if (event.button == MouseButton.LEFT):
-                self._left(event)
-            if (event.button == MouseButton.RIGHT):
-                self._right(event)
+            if(event.button == MouseButton.LEFT):
+               self._left(event)
+            if(event.button == MouseButton.RIGHT):
+               self._right(event)
 
         self.renderer.update()
 
@@ -76,14 +71,14 @@ class AddNewWire(CursorTool):
 
     def enable(self, event=None):
         super(AddNewWire, self).enable(event)
-        self.toolmanager.message_event("Conductivity of wire: " + str(self.elec))
+        self.toolmanager.message_event("Conductivity of wire: "+str(self.elec))
 
     def _scroll(self, event):
-        if (event.button == "up"):
-            self.elec += 1
-        if (event.button == "down" and self.elec > 1):
-            self.elec -= 1
-        self.toolmanager.message_event("Conductivity of wire: " + str(self.elec))
+        if(event.button=="up"):
+            self.elec+=1
+        if(event.button=="down" and self.elec>1):
+            self.elec-=1
+        self.toolmanager.message_event("Conductivity of wire: "+str(self.elec))
 
     def _left(self, event):
         self.renderer.system.addObject(Wire(event.xdata, event.ydata, 0.5, self.elec))
@@ -95,10 +90,9 @@ class AddNewWire(CursorTool):
 class RemoveWire(CursorTool):
     description = "Remove wire\nPoint to wire and use left click"
     image = os.path.abspath("icons/remove.png")
-
     def _left(self, event):
         for point in self.renderer.system.objects:
-            if (point.hit(event.xdata, event.ydata)):
+            if(point.hit(event.xdata, event.ydata)):
                 self.renderer.system.removeObject(point)
 
 
@@ -126,7 +120,7 @@ class Renderer():
         self.ax.set_aspect('equal')
         self.reshape()
         self.figure.canvas.manager.toolmanager.add_tool('DensityUp', ChangeDensity, renderer=self, mult=1.2)
-        self.figure.canvas.manager.toolmanager.add_tool('DensityDown', ChangeDensity, renderer=self, mult=1 / 1.2)
+        self.figure.canvas.manager.toolmanager.add_tool('DensityDown', ChangeDensity, renderer=self, mult=1/1.2)
         self.figure.canvas.manager.toolmanager.add_tool('AddWire', AddNewWire, renderer=self)
         self.figure.canvas.manager.toolmanager.add_tool('RemoveWire', RemoveWire, renderer=self)
         self.figure.canvas.manager.toolmanager.add_tool('RemoveAllWires', RemoveAllWires, renderer=self)
@@ -162,9 +156,11 @@ class Renderer():
         [Vx, Vy] = self.system.field(X, Y)
         X, Y = np.meshgrid(x, y)
 
-        if len(Vx) and len(Vy) and len(self.system.objects) > 0:
+        if len(Vx) and len(Vy) and len(self.system.objects)>0:
             self.ax.streamplot(x, y, -Vy, Vx, color=(2 * np.log(np.hypot(Vx, Vy))), linewidth=1, cmap=plt.cm.inferno,
                                density=self.density, arrowstyle='->', arrowsize=1.5)
+
+
 
     def dpoints(self):
         self.draggables = []
