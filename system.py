@@ -4,46 +4,22 @@ import math as m
 
 class System():
     def __init__(self, epsilon, gamma):
-        self.objects = []
+        self.sources = []
         self.walls = []
         self.epsilon = epsilon
         self.gamma = gamma
 
-    def addObject(self, point):
-        self.objects.append(point)
+    def add_source(self, point):
+        self.sources.append(point)
 
-    def removeObject(self, point):
-        self.objects.remove(point)
+    def remove_source(self, point):
+        self.sources.remove(point)
 
-    def removeAllObjects(self):
-        self.objects.clear()
+    def clear_sources(self):
+        self.sources.clear()
 
-    def addWall(self, wall):
+    def add_wall(self, wall):
         self.walls.append(wall)
-
-    def compute(self, i, X, Y, R, I):
-        dist = m.sqrt(m.pow(Y[i], 2) + m.pow(X[i], 2))
-        if(dist<R):
-            H = I / (2 * m.pi * R ** 2) * dist
-            return self.gamma*H
-        else:
-            return (self.gamma * I) / (2 * m.pi * dist)
-
-
-
-    def computeX(self, i, X, Y, R, I):
-        dist = m.sqrt(m.pow(Y[i], 2) + m.pow(X[i], 2))
-        B = self.compute(i, X, Y, R, I)
-        Bx = B * (X[i]/dist)
-
-        return Bx
-
-    def computeY(self, i, X, Y, R, I):
-        dist = m.sqrt(m.pow(Y[i], 2) + m.pow(X[i], 2))
-        B = self.compute(i, X, Y, R, I)
-        By = B * (Y[i]/dist)
-
-        return By
 
 
     def field(self, X, Y):
@@ -54,13 +30,16 @@ class System():
         Vx = np.zeros((u, v))
         Vy = np.zeros((u, v))
 
-        for object in self.objects:
-            tX = [X[i] - object.x for i in range(np.size(X))]
-            tY = [Y[i] - object.y for i in range(np.size(Y))]
-            Bx = np.array([self.computeX(i, tX, tY, object.size, object.electric) for i in range(size)], dtype=np.float)
-            By = np.array([self.computeY(i, tX, tY, object.size, object.electric) for i in range(size)], dtype=np.float)
-            Bx.shape = (u, v)
-            Vx = Vx + Bx
-            By.shape = (u, v)
-            Vy = Vy + By
+        for sources in self.sources:
+            tX = [X[i] - sources.x for i in range(np.size(X))]
+            tY = [Y[i] - sources.y for i in range(np.size(Y))]
+            vectors = [sources.vector_at_point(tX[i], tY[i], self.epsilon, self.gamma) for i in range(size)]
+            xv, yv = zip(*vectors)
+            xv = np.array(xv, dtype=np.float)
+            yv = np.array(yv, dtype=np.float)
+            xv.shape = (u,v)
+            yv.shape = (u,v)
+            Vx = Vx + xv
+            Vy = Vy + yv
+
         return Vx, Vy
