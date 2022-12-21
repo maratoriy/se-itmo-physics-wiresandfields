@@ -4,9 +4,13 @@ import numpy as np
 
 
 class MagneticSource:
-    @staticmethod
-    def dist(x, y):
-        return np.hypot(x, y)
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def dist(self, x, y):
+        return np.hypot(self.x-x, self.y-y)
 
     @abstractmethod
     def vector_at_point(self, dx, dy, epsilon, gamma):
@@ -15,13 +19,12 @@ class MagneticSource:
 
 class Wire(MagneticSource):
     def __init__(self, x, y, radius, electric):
-        self.x = x
-        self.y = y
+        super().__init__(x, y)
         self.radius = radius
         self.electric = electric
 
     def vector_at_point(self, dx, dy, epsilon, gamma):
-        dist = self.dist(dx, dy)
+        dist = np.hypot(dx, dy)
         if dist < self.radius:
             H = self.electric / (2 * m.pi * self.radius ** 2) * dist
             B = gamma * H
