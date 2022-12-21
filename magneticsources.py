@@ -20,10 +20,6 @@ class MagneticSource:
     def hit(self, x, y):
         pass
 
-    @abstractmethod
-    def intersect(self, x, y):
-        pass
-
 
 class Wire(MagneticSource):
     def __init__(self, x, y, radius, electric):
