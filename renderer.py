@@ -107,9 +107,11 @@ class CalculateAtPosition(ToolCursorPosition):
                     if a is not event.inaxes.patch:
                         data = a.get_cursor_data(event)
                         if data is not None:
-                            data_str = str(round(data,2))
+                            data_str = "{:.2f}".format(round(data,2))
                             if data_str:
                                 s = s + data_str + " " + self.renderer.DEFAULT_MAGNETIC_MEASURE['str']
+                else:
+                    s = s + "0 " + self.renderer.DEFAULT_MAGNETIC_MEASURE['str']
                 return s
 
     def send_message(self, event):
@@ -129,22 +131,44 @@ class AddNewWire(CursorTool):
 
     def enable(self, event=None):
         super(AddNewWire, self).enable(event)
-        self.toolmanager.message_event("Conductivity of wire: " + str(self.elec))
+        self.conduct_message()
+
+    def conduct_message(self):
+        self.toolmanager.message_event(
+            "Conductivity of wire: {elec:.2f} {measure}".format(
+                elec=self.elec * self.renderer.DEFAULT_ELEC_MEASURE['mult'],
+                measure=self.renderer.DEFAULT_ELEC_MEASURE['str']))
 
     def _scroll(self, event):
-        if (event.button == "up"):
-            self.elec += 1
-        if (event.button == "down" and self.elec > 1):
-            self.elec -= 1
+        if event.button == "up":
+            if self.elec < 999 and self.elec>=1:
+                self.elec += 1
+            elif self.elec>=0:
+                self.elec += 0.01
+        if event.button == "down":
+            if(self.elec>1):
+                self.elec -= 1
+            elif self.elec > 0.01:
+                self.elec -= 0.01
         self.toolmanager.message_event(
-            "Conductivity of wire: " + str(self.elec * self.renderer.DEFAULT_ELEC_MEASURE['mult']) + " " +
-            self.renderer.DEFAULT_ELEC_MEASURE['str'])
+            "Conductivity of wire: {elec:.2f} {measure}".format(elec=self.elec * self.renderer.DEFAULT_ELEC_MEASURE['mult'],
+            measure=self.renderer.DEFAULT_ELEC_MEASURE['str']))
+        self.conduct_message()
+
+    def check(self, event):
+        for source in self.system.sources:
+            if source.hit(event.xdata, event.ydata):
+                self.toolmanager.message_event("Intersection with another object!")
+                return False
+        return True
 
     def _left(self, event):
-        self.renderer.system.add_source(Wire(event.xdata, event.ydata, 0.5, self.elec))
+        if self.check(event):
+            self.renderer.system.add_source(Wire(event.xdata, event.ydata, 0.5, self.elec))
 
     def _right(self, event):
-        self.renderer.system.add_source(Wire(event.xdata, event.ydata, 0.5, -self.elec))
+        if self.check(event):
+            self.renderer.system.add_source(Wire(event.xdata, event.ydata, 0.5, -self.elec))
 
 
 class RemoveWire(CursorTool):
@@ -169,7 +193,7 @@ class RemoveAllWires(RendererToolBase):
 class Renderer():
     DEFAULT_ELEC_MEASURE = {'str': "A", 'mult': 1}
     DEFAULT_MAGNETIC_MEASURE = {'str': "mT", 'mult': 1000}
-
+    colorbar = None
     def launch(self):
         self.figure, self.ax = plt.subplots()
         self.update()
@@ -213,6 +237,8 @@ class Renderer():
 
     def clear(self):
         plt.cla()
+        if(self.colorbar):
+            self.colorbar.remove()
 
     def dfield(self):
         x = np.linspace(-self.XMAX, self.XMAX, self.rx)
@@ -220,25 +246,22 @@ class Renderer():
         X, Y = np.meshgrid(x, y)
         [Vx, Vy] = self.system.field(X, Y)
 
-        def block_delete(a, n, m):  # keep n, remove m
-            mask = np.tile(np.r_[np.ones(n), np.zeros(m)].astype(bool), a.size // (n + m) + 1)[:a.size]
-            return a[mask]
-
-        V = np.hypot(Vx, Vy) * self.DEFAULT_MAGNETIC_MEASURE['mult']
-
         if len(Vx) and len(Vy) and len(self.system.sources) > 0:
-            color = (2 * np.log(np.hypot(Vx, Vy)))
-            self.ax.streamplot(x, y, Vx, Vy, color=(2 * np.log(np.hypot(Vx, Vy))),
-                               linewidth=1,
-                               density=self.density, arrowstyle='->', arrowsize=1, cmap=mpl.colormaps['inferno'])
-            self.ax.matshow(V, interpolation='nearest', alpha=1, cmap=plt.cm.inferno,
-                            extent=(-self.XMAX, self.XMAX, self.YMAX, -self.YMAX))
+            V = np.hypot(Vx, Vy) * self.DEFAULT_MAGNETIC_MEASURE['mult']
+            self.ax.streamplot(x, y, Vx, Vy, color="white",
+                               linewidth=0.5,
+                               density=self.density, arrowstyle='->', arrowsize=1)
+            mshow = self.ax.matshow(V, interpolation='nearest', alpha=1, cmap=plt.cm.inferno,
+                                    extent=(-self.XMAX, self.XMAX, self.YMAX, -self.YMAX))
+
+            self.colorbar = self.figure.colorbar(mshow)
+            self.colorbar.ax.set_ylabel("B, {unit}".format(unit=self.DEFAULT_MAGNETIC_MEASURE['str']), rotation=270)
 
     def dpoints(self):
         self.draggables = []
         for point in self.system.sources:
             circle = Circle((point.x, point.y), point.radius,
-                            color=plt.cm.RdBu(mpl.colors.Normalize(vmin=-10, vmax=10)(-point.electric)), zorder=100)
+                            color=plt.cm.RdBu(mpl.colors.Normalize(vmin=-0.01, vmax=0.01)(-point.electric)), zorder=100)
             self.ax.add_patch(circle)
             draggable = DraggablePoint(circle, self.update, point)
             draggable.connect()

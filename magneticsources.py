@@ -16,6 +16,14 @@ class MagneticSource:
     def vector_at_point(self, dx, dy, epsilon, gamma):
         pass
 
+    @abstractmethod
+    def hit(self, x, y):
+        pass
+
+    @abstractmethod
+    def intersect(self, x, y):
+        pass
+
 
 class Wire(MagneticSource):
     def __init__(self, x, y, radius, electric):
@@ -34,3 +42,5 @@ class Wire(MagneticSource):
 
     def hit(self, x, y):
         return (x - self.x) ** 2 + (y - self.y) ** 2 <= self.radius ** 2
+
+
