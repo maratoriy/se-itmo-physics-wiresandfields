@@ -24,8 +24,8 @@ class MagneticSource:
 class Wire(MagneticSource):
     def __init__(self, x, y, radius, electric):
         super().__init__(x, y)
-        self.radius = radius
-        self.electric = electric
+        self.radius = radius # R
+        self.electric = electric # z*I
 
     def vector_at_point(self, dx, dy, epsilon, gamma):
         dist = np.hypot(dx, dy)

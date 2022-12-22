@@ -85,6 +85,21 @@ class CursorTool(RendererToolBase, ToolToggleBase):
     def _scroll(self, event):
         pass
 
+class AddSolidLine(CursorTool):
+    def enable(self, event=None):
+        self.renderer.broken=False
+        self.renderer.update()
+        super(AddSolidLine, self).enable(event)
+
+    def disable(self, event=None):
+        self.renderer.broken=True
+        super(AddSolidLine, self).disable(event)
+        self.renderer.start_points.clear()
+        self.renderer.update()
+
+    def _left(self, event):
+        self.renderer.start_points.append((event.xdata, event.ydata))
+
 
 class CalculateAtPosition(ToolCursorPosition):
 
@@ -180,7 +195,6 @@ class RemoveWire(CursorTool):
             if (point.hit(event.xdata, event.ydata)):
                 self.renderer.system.remove_source(point)
 
-
 class RemoveAllWires(RendererToolBase):
     description = "Remove all wires"
     image = resource_path("icons/remove_all.png")
@@ -194,6 +208,8 @@ class Renderer():
     DEFAULT_ELEC_MEASURE = {'str': "A", 'mult': 1}
     DEFAULT_MAGNETIC_MEASURE = {'str': "mT", 'mult': 1000}
     colorbar = None
+    broken = True
+    start_points = list()
     def launch(self):
         self.figure, self.ax = plt.subplots()
         self.update()
@@ -204,11 +220,13 @@ class Renderer():
         self.figure.canvas.manager.toolmanager.add_tool('RemoveWire', RemoveWire, renderer=self)
         self.figure.canvas.manager.toolmanager.add_tool('RemoveAllWires', RemoveAllWires, renderer=self)
         self.figure.canvas.manager.toolmanager.add_tool('position', CalculateAtPosition, renderer=self)
+        self.figure.canvas.manager.toolmanager.add_tool('AddSolidLine', AddSolidLine, renderer=self)
         self.figure.canvas.manager.toolbar.add_tool('DensityUp', 'system')
         self.figure.canvas.manager.toolbar.add_tool('DensityDown', 'system')
         self.figure.canvas.manager.toolbar.add_tool('AddWire', 'system')
         self.figure.canvas.manager.toolbar.add_tool('RemoveWire', 'system')
         self.figure.canvas.manager.toolbar.add_tool('RemoveAllWires', 'system')
+        self.figure.canvas.manager.toolbar.add_tool('AddSolidLine', 'system')
         to_remove = ['forward', 'back']
         for i in to_remove:
             self.figure.canvas.manager.toolmanager.remove_tool(i)
@@ -248,9 +266,14 @@ class Renderer():
 
         if len(Vx) and len(Vy) and len(self.system.sources) > 0:
             V = np.hypot(Vx, Vy) * self.DEFAULT_MAGNETIC_MEASURE['mult']
-            self.ax.streamplot(x, y, Vx, Vy, color="white",
-                               linewidth=0.5,
-                               density=self.density, arrowstyle='->', arrowsize=1)
+            if self.broken:
+                self.ax.streamplot(x, y, Vx, Vy, color="white",
+                                   linewidth=0.5,
+                                   density=self.density, arrowstyle='->', arrowsize=1)
+            elif len(self.start_points)>0:
+                self.ax.streamplot(x, y, Vx, Vy, color="white",
+                                   linewidth=0.5, start_points = self.start_points,
+                                   density=self.density, arrowstyle='->', arrowsize=1, broken_streamlines=False)
             mshow = self.ax.matshow(V, interpolation='nearest', alpha=1, cmap=plt.cm.inferno,
                                     extent=(-self.XMAX, self.XMAX, self.YMAX, -self.YMAX))
 
